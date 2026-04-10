@@ -1,14 +1,19 @@
 from sqlmodel import Field, SQLModel, Relationship
 from typing import Optional
-from pydantic import EmailStr   #insert at top of the file
+from pydantic import EmailStr
 
 class Token(SQLModel):
     access_token: str
     token_type: str
 
+class UserCreate(SQLModel):
+    username: str
+    email: EmailStr = Field(max_length=255)
+    password: str = Field(min_length=8, max_length=128)
+
 class UserResponse(SQLModel):
     id: Optional[int]
-    username:str
+    username: str
     email: EmailStr
 
 class User(SQLModel, table=False):
@@ -16,14 +21,13 @@ class User(SQLModel, table=False):
     username: str = Field(index=True, unique=True)
     email: str = Field(index=True, unique=True)
     password: str
-    role:str = ""
+    role: str = ""
 
 class Admin(User, table=True):
-    role:str = "admin"
+    role: str = "admin"
 
 class RegularUser(User, table=True):
-    role:str = "regular_user"
-
+    role: str = "regular_user"
     todos: list['Todo'] = Relationship(back_populates="user")
 
 class TodoCategory(SQLModel, table=True):
@@ -33,18 +37,29 @@ class TodoCategory(SQLModel, table=True):
 class Category(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
     user_id: int = Field(foreign_key="regularuser.id")
-    text:str
+    text: str
+    todos: list['Todo'] = Relationship(back_populates="categories", link_model=TodoCategory)
 
-    todos:list['Todo'] = Relationship(back_populates="categories", link_model=TodoCategory)
+class TodoCreate(SQLModel):
+    text: str
+
+class TodoResponse(SQLModel):
+    id: Optional[int] = Field(primary_key=True, default=None)
+    text: str
+    done: bool = False
+
+class TodoUpdate(SQLModel):
+    text: Optional[str] = None
+    done: Optional[bool] = None
 
 class Todo(SQLModel, table=True):
     id: Optional[int] = Field(primary_key=True, default=None)
     user_id: int = Field(foreign_key="regularuser.id")
-    text:str
+    text: str
     done: bool = False
 
     user: RegularUser = Relationship(back_populates="todos")
-    categories:list['Category'] = Relationship(back_populates="todos", link_model=TodoCategory)
+    categories: list['Category'] = Relationship(back_populates="todos", link_model=TodoCategory)
 
     def toggle(self):
         self.done = not self.done
